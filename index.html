@@ -1,0 +1,1198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Recipe Finder</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #faf7f2;
+      --surface: #ffffff;
+      --surface2: #f5f0e8;
+      --border: #e8e0d0;
+      --accent: #e8622a;
+      --accent-hover: #d4551f;
+      --accent-light: #fef0ea;
+      --text: #2c2416;
+      --text-muted: #7a6e5f;
+      --green: #4a7c59;
+      --green-light: #eaf3ee;
+      --shadow: 0 2px 12px rgba(0,0,0,0.08);
+      --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
+      --radius: 12px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 18px 28px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    }
+    .logo { font-size: 26px; }
+    header h1 { font-size: 19px; font-weight: 700; letter-spacing: -0.3px; }
+    header p { font-size: 13px; color: var(--text-muted); margin-top: 1px; }
+
+    /* ── Main two-column layout ── */
+    .layout {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 24px;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 28px 24px;
+      align-items: start;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      position: sticky;
+      top: 80px;
+      max-height: calc(100vh - 100px);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .sidebar-header {
+      padding: 16px 18px 12px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .sidebar-header h2 { font-size: 15px; font-weight: 700; margin-bottom: 10px; }
+
+    .search-input {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-size: 13px;
+      color: var(--text);
+      background: var(--bg);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .search-input:focus { border-color: var(--accent); }
+    .search-input::placeholder { color: var(--text-muted); }
+
+    .sidebar-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 18px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .selected-count {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .selected-count span {
+      font-weight: 700;
+      color: var(--accent);
+    }
+    .btn-clear-all {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px 6px;
+      border-radius: 6px;
+      transition: background 0.1s, color 0.1s;
+    }
+    .btn-clear-all:hover { background: var(--surface2); color: var(--text); }
+
+    /* ── Ingredient list ── */
+    .ingredient-scroll {
+      overflow-y: auto;
+      flex: 1;
+      padding: 8px 0;
+    }
+    .ingredient-scroll::-webkit-scrollbar { width: 4px; }
+    .ingredient-scroll::-webkit-scrollbar-track { background: transparent; }
+    .ingredient-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    .ingredient-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 18px;
+      cursor: pointer;
+      border-radius: 0;
+      transition: background 0.1s;
+      user-select: none;
+    }
+    .ingredient-row:hover { background: var(--surface2); }
+    .ingredient-row.selected { background: var(--accent-light); }
+
+    .ing-emoji { font-size: 18px; width: 24px; text-align: center; flex-shrink: 0; }
+    .ing-name {
+      font-size: 14px;
+      flex: 1;
+      color: var(--text);
+      text-transform: capitalize;
+    }
+    .ingredient-row.selected .ing-name { color: var(--accent); font-weight: 600; }
+
+    .ing-check {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+      border: 1.5px solid var(--border);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.1s;
+    }
+    .ingredient-row.selected .ing-check {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    .ing-check-mark { display: none; color: #fff; font-size: 10px; font-weight: 700; }
+    .ingredient-row.selected .ing-check-mark { display: block; }
+
+    .no-results-msg {
+      padding: 20px 18px;
+      font-size: 13px;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    /* ── Right content ── */
+    .content {}
+
+    .results-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .results-bar h2 { font-size: 17px; font-weight: 700; }
+    .results-count {
+      font-size: 13px;
+      color: var(--text-muted);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 4px 12px;
+    }
+
+    /* ── Recipe Grid ── */
+    #recipes-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 16px;
+    }
+
+    /* ── Recipe Card ── */
+    .recipe-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+      position: relative;
+    }
+    .recipe-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg);
+      border-color: #d8cfc0;
+    }
+    .recipe-card:active { transform: translateY(0); }
+
+    .card-emoji { font-size: 34px; margin-bottom: 10px; display: block; }
+    .card-title { font-size: 15px; font-weight: 700; margin-bottom: 8px; line-height: 1.3; }
+
+    .card-meta {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .meta-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .card-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+    .tag {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 10px;
+      background: var(--surface2);
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .match-bar-wrap { margin-top: 4px; }
+    .match-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+    .match-bar-track {
+      height: 4px;
+      background: var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .match-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      background: var(--green);
+      transition: width 0.4s ease;
+    }
+
+    .missing-badge {
+      position: absolute;
+      top: 10px; right: 10px;
+      background: var(--accent-light);
+      color: var(--accent);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 10px;
+    }
+    .full-match-badge {
+      position: absolute;
+      top: 10px; right: 10px;
+      background: var(--green-light);
+      color: var(--green);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 10px;
+    }
+
+    /* ── Empty state ── */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-muted);
+      grid-column: 1 / -1;
+    }
+    .empty-state .big-emoji { font-size: 48px; display: block; margin-bottom: 14px; }
+    .empty-state h3 { font-size: 17px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
+    .empty-state p { font-size: 14px; line-height: 1.6; max-width: 300px; margin: 0 auto; }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 100;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    .modal-overlay.open { display: flex; align-items: flex-start; justify-content: center; }
+
+    .modal {
+      background: var(--surface);
+      border-radius: 16px;
+      width: 100%;
+      max-width: 640px;
+      margin: auto;
+      box-shadow: var(--shadow-lg);
+      overflow: hidden;
+      animation: slide-up 0.2s ease;
+    }
+    @keyframes slide-up {
+      from { transform: translateY(20px); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
+
+    .modal-header {
+      padding: 28px 28px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    .modal-emoji { font-size: 50px; }
+    .modal-close {
+      background: var(--surface2);
+      border: none;
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      font-size: 17px;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s;
+    }
+    .modal-close:hover { background: var(--border); }
+
+    .modal-body { padding: 16px 28px 30px; }
+    .modal-title { font-size: 22px; font-weight: 800; margin-bottom: 12px; line-height: 1.2; }
+
+    .modal-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-bottom: 20px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .modal-meta-item { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+    .modal-meta-value { font-size: 17px; font-weight: 700; color: var(--accent); }
+    .modal-meta-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+
+    .temp-banner {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #fff4ed;
+      border: 1px solid #f5c5a3;
+      border-radius: 10px;
+      padding: 10px 16px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--accent);
+    }
+    .temp-banner .temp-icon { font-size: 18px; }
+    .temp-banner .temp-values { display: flex; gap: 14px; }
+    .temp-banner .temp-unit { font-size: 13px; }
+    .temp-banner .temp-label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 1px; }
+
+    .section-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    .equipment-list { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 22px; }
+    .equipment-chip {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 5px 13px;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .modal-ingredient-list {
+      list-style: none;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-bottom: 22px;
+    }
+    .modal-ingredient-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      padding: 6px 10px;
+      border-radius: 8px;
+      background: var(--bg);
+    }
+    .modal-ingredient-item.have { background: var(--green-light); }
+    .modal-ingredient-item.missing { background: var(--accent-light); }
+    .modal-ing-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; background: var(--border); }
+    .have .modal-ing-dot { background: var(--green); }
+    .missing .modal-ing-dot { background: var(--accent); }
+    .modal-ing-name { flex: 1; }
+    .modal-ing-amount { font-size: 11px; color: var(--text-muted); }
+
+    .steps-list { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+    .step-item { display: flex; gap: 12px; align-items: flex-start; }
+    .step-num {
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #fff;
+      font-size: 11px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .step-text { font-size: 14px; line-height: 1.65; }
+
+    /* ── Cuisine filter ── */
+    .cuisine-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+      padding: 14px 18px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+    .cuisine-bar-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+      margin-right: 4px;
+    }
+    .cuisine-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      flex: 1;
+    }
+    .cuisine-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1.5px solid var(--border);
+      background: var(--bg);
+      color: var(--text-muted);
+      transition: all 0.15s;
+      user-select: none;
+      white-space: nowrap;
+    }
+    .cuisine-chip:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-light);
+    }
+    .cuisine-chip.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+      font-weight: 700;
+    }
+    .cuisine-chip.all-chip.active {
+      background: var(--text);
+      border-color: var(--text);
+      color: #fff;
+    }
+    .cuisine-chip-flag { font-size: 16px; line-height: 1; }
+
+    /* ── Mobile ── */
+    @media (max-width: 680px) {
+      .layout { grid-template-columns: 1fr; padding: 16px; gap: 16px; }
+      .sidebar { position: static; max-height: 320px; }
+      .modal-ingredient-list { grid-template-columns: 1fr; }
+      .modal-body { padding: 12px 18px 22px; }
+      .modal-header { padding: 20px 18px 0; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <span class="logo">🍽️</span>
+  <div>
+    <h1>Recipe Finder</h1>
+    <p>Select ingredients to find matching recipes</p>
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- ── Sidebar: ingredient picker ── -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <h2>Your Ingredients</h2>
+      <input class="search-input" type="text" id="ing-search" placeholder="Search ingredients…" oninput="renderIngredientList()" autocomplete="off" />
+    </div>
+    <div class="sidebar-actions">
+      <span class="selected-count" id="selected-count">All recipes shown</span>
+      <button class="btn-clear-all" id="clear-btn" onclick="clearSelection()" style="display:none">Clear all</button>
+    </div>
+    <div class="ingredient-scroll" id="ingredient-list"></div>
+  </aside>
+
+  <!-- ── Main content ── -->
+  <div class="content">
+    <div class="results-bar">
+      <h2 id="results-heading">All Recipes</h2>
+      <span class="results-count" id="results-count"></span>
+    </div>
+    <div class="cuisine-bar">
+      <span class="cuisine-bar-label">Cuisine</span>
+      <div class="cuisine-chips" id="cuisine-chips"></div>
+    </div>
+    <div id="recipes-grid"></div>
+  </div>
+
+</div>
+
+<!-- ── Recipe Modal ── -->
+<div class="modal-overlay" id="modal-overlay" onclick="handleOverlayClick(event)">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <span class="modal-emoji" id="modal-emoji"></span>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <h2 class="modal-title" id="modal-title"></h2>
+      <div class="modal-meta" id="modal-meta"></div>
+      <div id="modal-temp-section"></div>
+      <p class="section-title">Equipment Needed</p>
+      <div class="equipment-list" id="modal-equipment"></div>
+      <p class="section-title">Ingredients</p>
+      <ul class="modal-ingredient-list" id="modal-ingredients"></ul>
+      <p class="section-title">Steps</p>
+      <ol class="steps-list" id="modal-steps"></ol>
+    </div>
+  </div>
+</div>
+
+<script src="recipes.js"></script>
+<script src="recipes2.js"></script>
+<script src="recipes3.js"></script>
+<script>
+  const ALL_RECIPES = [...RECIPES, ...RECIPES2, ...RECIPES3];
+</script>
+<script>
+  // ── Ingredient Emoji map (specific per ingredient) ──
+  const INGREDIENT_EMOJIS = {
+    // Eggs & Dairy
+    "eggs": "🥚", "egg": "🥚",
+    "butter": "🧈",
+    "milk": "🥛",
+    "heavy cream": "🥛",
+    "sour cream": "🥛",
+    "yogurt": "🥛",
+    "sweetened condensed milk": "🥛",
+    "parmesan cheese": "🧀",
+    "cheddar cheese": "🧀",
+    "feta cheese": "🧀",
+    "gruyère cheese": "🧀",
+    "mozzarella cheese": "🧀",
+    "mascarpone cheese": "🧀",
+    "cream cheese": "🧀",
+    "paneer": "🧀",
+
+    // Meat & Seafood
+    "chicken thighs": "🍗",
+    "chicken breast": "🍗",
+    "ground beef": "🥩",
+    "beef sirloin": "🥩",
+    "beef chuck": "🥩",
+    "beef mince": "🥩",
+    "ground pork": "🥩",
+    "pork shoulder": "🥩",
+    "pork belly": "🥩",
+    "pork tenderloin": "🥩",
+    "veal or pork cutlets": "🥩",
+    "lamb mince": "🥩",
+    "ground lamb": "🥩",
+    "bacon": "🥓",
+    "guanciale or bacon": "🥓",
+    "ham": "🍖",
+    "pork ribs": "🍖",
+    "smoked sausage": "🌭",
+    "bratwurst sausages": "🌭",
+    "salmon fillets": "🐟",
+    "salmon": "🐟",
+    "cod fillets": "🐟",
+    "white fish fillets": "🐟",
+    "fish cakes": "🐟",
+    "canned tuna": "🐟",
+    "shrimp": "🦐",
+    "bonito flakes": "🐡",
+
+    // Vegetables
+    "onion": "🧅",
+    "red onion": "🧅",
+    "pearl onions": "🧅",
+    "garlic": "🧄",
+    "ginger": "🫚",
+    "galangal or ginger": "🫚",
+    "spring onions": "🌱",
+    "chives": "🌱",
+    "carrot": "🥕",
+    "celery": "🥬",
+    "potatoes": "🥔",
+    "sweet potato": "🍠",
+    "tomatoes": "🍅",
+    "cherry tomatoes": "🍅",
+    "canned tomatoes": "🍅",
+    "tomato paste": "🍅",
+    "cucumber": "🥒",
+    "zucchini": "🥒",
+    "daikon radish": "🥕",
+    "radishes": "🫛",
+    "eggplant": "🍆",
+    "bell pepper": "🫑",
+    "red bell pepper": "🫑",
+    "green pepper": "🫑",
+    "poblano peppers": "🫑",
+    "broccoli": "🥦",
+    "cabbage": "🥬",
+    "lettuce": "🥬",
+    "spinach": "🥬",
+    "bok choy": "🥬",
+    "sauerkraut": "🥬",
+    "kimchi": "🥬",
+    "green beans": "🫛",
+    "frozen peas": "🫛",
+    "peas": "🫛",
+    "bean sprouts": "🌱",
+    "corn": "🌽",
+    "canned hominy": "🌽",
+    "mushrooms": "🍄",
+    "avocado": "🥑",
+    "olives": "🫒",
+    "green olives": "🫒",
+    "beetroot": "🫐",
+
+    // Fruits
+    "lemon": "🍋",
+    "lime": "🍋‍🟩",
+    "orange": "🍊",
+    "banana": "🍌",
+    "mango": "🥭",
+    "pineapple chunks": "🍍",
+    "apple": "🍎",
+    "pear or apple": "🍐",
+    "berries": "🫐",
+    "preserved lemon": "🍋",
+
+    // Herbs & Spices
+    "salt": "🧂",
+    "pepper": "🧂",
+    "black pepper": "🧂",
+    "saffron": "🌼",
+    "star anise": "⭐",
+    "bay leaves": "🍃",
+    "kaffir lime leaves": "🍃",
+    "lemongrass": "🌿",
+    "dried wakame seaweed": "🌿",
+    "nori": "🌿",
+    "fresh parsley": "🌿",
+    "parsley": "🌿",
+    "fresh basil": "🌿",
+    "basil": "🌿",
+    "fresh mint": "🌿",
+    "fresh cilantro": "🌿",
+    "fresh dill": "🌿",
+    "fresh thyme": "🌿",
+    "dried thyme": "🌿",
+    "thyme": "🌿",
+    "dried oregano": "🌿",
+    "oregano": "🌿",
+    "dried dill": "🌿",
+    "dill": "🌿",
+    "dried rosemary": "🌿",
+    "cumin": "🌿",
+    "paprika": "🌶️",
+    "chili powder": "🌶️",
+    "chili flakes": "🌶️",
+    "red pepper flakes": "🌶️",
+    "dried chili peppers": "🌶️",
+    "chili peppers": "🌶️",
+    "scotch bonnet pepper": "🌶️",
+    "jalapeño": "🌶️",
+    "dried ancho chili": "🌶️",
+    "dried guajillo chili": "🌶️",
+    "gochujang": "🌶️",
+    "chili bean paste": "🌶️",
+    "chili oil": "🌶️",
+    "turmeric": "🌿",
+    "garam masala": "🌿",
+    "curry powder": "🌿",
+    "cinnamon": "🫙",
+    "cinnamon stick": "🫙",
+    "nutmeg": "🌰",
+    "caraway seeds": "🌿",
+    "allspice": "🌿",
+    "five-spice powder": "🌿",
+    "sichuan peppercorns": "🌿",
+    "sesame seeds": "🌾",
+    "coriander": "🌿",
+
+    // Oils, Sauces & Condiments
+    "olive oil": "🫒",
+    "vegetable oil": "🫙",
+    "sesame oil": "🫙",
+    "soy sauce": "🫙",
+    "miso paste": "🫙",
+    "fish sauce": "🫙",
+    "oyster sauce": "🫙",
+    "hoisin sauce": "🫙",
+    "okonomiyaki sauce": "🫙",
+    "tamarind paste": "🫙",
+    "tahini": "🫙",
+    "mayonnaise": "🫙",
+    "ketchup": "🍅",
+    "dijon mustard": "🫙",
+    "mustard": "🫙",
+    "worcestershire sauce": "🫙",
+    "mirin": "🍶",
+    "sake": "🍶",
+    "vanilla extract": "🍶",
+    "green curry paste": "🌿",
+
+    // Liquids & Broths
+    "water": "💧",
+    "cold water": "💧",
+    "warm water": "💧",
+    "ice water": "💧",
+    "vegetable broth": "🫕",
+    "chicken broth": "🫕",
+    "beef broth": "🫕",
+    "dashi stock": "🫕",
+    "coconut milk": "🥥",
+    "beer": "🍺",
+    "white wine": "🍷",
+    "red wine": "🍷",
+    "red wine vinegar": "🍷",
+    "rice vinegar": "🍷",
+    "malt vinegar": "🍷",
+    "coffee liqueur": "🥃",
+    "strong espresso": "☕",
+
+    // Grains, Pasta & Bread
+    "pasta": "🍝",
+    "spaghetti": "🍝",
+    "macaroni pasta": "🍝",
+    "rice noodles": "🍜",
+    "ramen noodles": "🍜",
+    "noodles": "🍜",
+    "rice vermicelli": "🍜",
+    "cooked rice": "🍚",
+    "short-grain rice": "🍚",
+    "long-grain rice": "🍚",
+    "basmati rice": "🍚",
+    "arborio rice": "🍚",
+    "glutinous rice": "🍚",
+    "flour": "🌾",
+    "bread flour": "🌾",
+    "tapioca flour": "🌾",
+    "rolled oats": "🌾",
+    "oats": "🌾",
+    "couscous": "🌾",
+    "bulgur wheat": "🌾",
+    "cornstarch": "🌽",
+    "bread": "🍞",
+    "stale bread": "🍞",
+    "rustic bread": "🍞",
+    "breadcrumbs": "🍞",
+    "baguette": "🥖",
+    "burger buns": "🥖",
+    "tortillas": "🫓",
+    "corn tortillas": "🫓",
+    "flatbread": "🫓",
+    "pita bread": "🫓",
+    "shortcrust pastry": "🫓",
+    "filo pastry": "🫓",
+    "ladyfinger biscuits": "🍪",
+    "gyoza wrappers": "🥟",
+    "wonton wrappers": "🥟",
+    "rice paper wrappers": "🫓",
+
+    // Legumes & Nuts
+    "canned black beans": "🫘",
+    "black beans": "🫘",
+    "canned white beans": "🫘",
+    "canned chickpeas": "🫘",
+    "dried chickpeas": "🫘",
+    "canned kidney beans": "🫘",
+    "kidney beans": "🫘",
+    "red lentils": "🫘",
+    "chia seeds": "🫘",
+    "peanuts": "🥜",
+    "peanut butter": "🥜",
+    "walnuts": "🌰",
+    "pistachios": "🌰",
+
+    // Sugars & Sweet
+    "sugar": "🍬",
+    "brown sugar": "🍬",
+    "honey": "🍯",
+    "chocolate chips": "🍫",
+    "chocolate": "🍫",
+    "cocoa powder": "🍫",
+    "chocolate sprinkles": "🍫",
+    "sweetened condensed milk": "🥛",
+
+    // Leavening & Baking
+    "baking powder": "🧪",
+    "baking soda": "🧪",
+    "instant yeast": "🧪",
+
+    // Japanese-specific
+    "tofu": "⬜",
+    "miso paste": "🫙",
+    "rice cakes": "🍡",
+    "fish cakes": "🐟",
+
+    // Misc
+    "sugar": "🍬",
+    "salt": "🧂",
+  };
+
+  function getEmoji(name) {
+    const n = name.toLowerCase().trim();
+    if (INGREDIENT_EMOJIS[n]) return INGREDIENT_EMOJIS[n];
+    for (const key of Object.keys(INGREDIENT_EMOJIS)) {
+      if (n.includes(key) || key.includes(n)) return INGREDIENT_EMOJIS[key];
+    }
+    return "🥄";
+  }
+
+  // ── Build unique ingredient list from all recipes ──
+  const ALL_INGREDIENTS = (() => {
+    const seen = new Set();
+    const list = [];
+    for (const recipe of ALL_RECIPES) {
+      for (const ing of recipe.ingredients) {
+        const key = ing.name.toLowerCase().trim();
+        if (!seen.has(key)) {
+          seen.add(key);
+          list.push(key);
+        }
+      }
+    }
+    return list.sort((a, b) => a.localeCompare(b));
+  })();
+
+  // ── Cuisine filter ──
+  const CUISINE_META = {
+    "All":             { flag: "🌍" },
+    "American":        { flag: "🇺🇸" },
+    "Spanish":         { flag: "🇪🇸" },
+    "Italian":         { flag: "🇮🇹" },
+    "French":          { flag: "🇫🇷" },
+    "Greek":           { flag: "🇬🇷" },
+    "British":         { flag: "🇬🇧" },
+    "German":          { flag: "🇩🇪" },
+    "Austrian":        { flag: "🇦🇹" },
+    "Turkish":         { flag: "🇹🇷" },
+    "Russian":         { flag: "🇷🇺" },
+    "Eastern European":{ flag: "🗺️" },
+    "Lebanese":        { flag: "🇱🇧" },
+    "Middle Eastern":  { flag: "🌙" },
+    "Moroccan":        { flag: "🇲🇦" },
+    "African":         { flag: "🌍" },
+    "Nigerian":        { flag: "🇳🇬" },
+    "Jamaican":        { flag: "🇯🇲" },
+    "Caribbean":       { flag: "🌴" },
+    "Indian":          { flag: "🇮🇳" },
+    "Japanese":        { flag: "🇯🇵" },
+    "Chinese":         { flag: "🇨🇳" },
+    "Korean":          { flag: "🇰🇷" },
+    "Sichuan":         { flag: "🌶️" },
+    "Thai":            { flag: "🇹🇭" },
+    "Vietnamese":      { flag: "🇻🇳" },
+    "Mexican":         { flag: "🇲🇽" },
+    "Brazilian":       { flag: "🇧🇷" },
+    "Peruvian":        { flag: "🇵🇪" },
+    "Argentine":       { flag: "🇦🇷" },
+    "Latin American":  { flag: "🌎" },
+    "Asian":           { flag: "🌏" },
+  };
+
+  // Auto-detect which cuisines actually appear in the recipe list
+  const KNOWN_CUISINES = Object.keys(CUISINE_META).filter(c => c !== "All");
+  const ACTIVE_CUISINES = ["All", ...KNOWN_CUISINES.filter(c =>
+    ALL_RECIPES.some(r => r.tags.includes(c))
+  )];
+
+  let selectedCuisine = "All";
+
+  function renderCuisineChips() {
+    const container = document.getElementById("cuisine-chips");
+    container.innerHTML = ACTIVE_CUISINES.map(c => {
+      const meta = CUISINE_META[c] || { flag: "🍽️" };
+      const isActive = selectedCuisine === c;
+      const isAll = c === "All";
+      return `<button class="cuisine-chip ${isAll ? "all-chip" : ""} ${isActive ? "active" : ""}"
+        onclick="selectCuisine('${c}')" title="${c}">
+        <span class="cuisine-chip-flag">${meta.flag}</span>
+        ${c}
+      </button>`;
+    }).join("");
+  }
+
+  function selectCuisine(name) {
+    selectedCuisine = name;
+    renderCuisineChips();
+    renderRecipes();
+  }
+
+  let selectedIngredients = new Set();
+
+  // ── Ingredient list rendering ──
+  function renderIngredientList() {
+    const query = document.getElementById("ing-search").value.toLowerCase().trim();
+    const list = document.getElementById("ingredient-list");
+    const filtered = query
+      ? ALL_INGREDIENTS.filter(i => i.includes(query))
+      : ALL_INGREDIENTS;
+
+    if (filtered.length === 0) {
+      list.innerHTML = `<div class="no-results-msg">No ingredients found.</div>`;
+      return;
+    }
+
+    list.innerHTML = filtered.map(ing => {
+      const selected = selectedIngredients.has(ing);
+      return `
+        <div class="ingredient-row ${selected ? "selected" : ""}" onclick="toggleIngredient('${ing}')">
+          <span class="ing-emoji">${getEmoji(ing)}</span>
+          <span class="ing-name">${ing}</span>
+          <span class="ing-check"><span class="ing-check-mark">✓</span></span>
+        </div>`;
+    }).join("");
+  }
+
+  function toggleIngredient(ing) {
+    if (selectedIngredients.has(ing)) {
+      selectedIngredients.delete(ing);
+    } else {
+      selectedIngredients.add(ing);
+    }
+    renderIngredientList();
+    updateSelectionUI();
+    renderRecipes();
+  }
+
+  function clearSelection() {
+    selectedIngredients.clear();
+    renderIngredientList();
+    updateSelectionUI();
+    renderRecipes();
+  }
+
+  function updateSelectionUI() {
+    const count = selectedIngredients.size;
+    const label = document.getElementById("selected-count");
+    const clearBtn = document.getElementById("clear-btn");
+    if (count === 0) {
+      label.innerHTML = "All recipes shown";
+      clearBtn.style.display = "none";
+    } else {
+      label.innerHTML = `<span>${count}</span> ingredient${count !== 1 ? "s" : ""} selected`;
+      clearBtn.style.display = "inline-block";
+    }
+  }
+
+  // ── Recipe matching ──
+  function normalise(s) {
+    return s.toLowerCase().trim().replace(/s$/, "");
+  }
+
+  function hasIngredient(ingName) {
+    const n = normalise(ingName);
+    return [...selectedIngredients].some(h => normalise(h) === n || n.includes(normalise(h)) || normalise(h).includes(n));
+  }
+
+  function matchCount(recipe) {
+    return recipe.ingredients.filter(ing => hasIngredient(ing.name)).length;
+  }
+
+  // ── Recipe grid rendering ──
+  function renderRecipes() {
+    const grid = document.getElementById("recipes-grid");
+    const hasIngFilter = selectedIngredients.size > 0;
+    const hasCuisineFilter = selectedCuisine !== "All";
+
+    // 1 — cuisine filter
+    let sorted = hasCuisineFilter
+      ? ALL_RECIPES.filter(r => r.tags.includes(selectedCuisine))
+      : [...ALL_RECIPES];
+
+    // 2 — ingredient filter + sort
+    if (hasIngFilter) {
+      sorted = sorted
+        .map(r => ({ recipe: r, matched: matchCount(r), total: r.ingredients.length }))
+        .filter(({ matched }) => matched > 0)
+        .sort((a, b) => (b.matched / b.total) - (a.matched / a.total))
+        .map(({ recipe }) => recipe);
+    }
+
+    const hasAnyFilter = hasIngFilter || hasCuisineFilter;
+    document.getElementById("results-heading").textContent =
+      hasAnyFilter
+        ? (hasCuisineFilter ? `${selectedCuisine} Recipes` : "Matching Recipes")
+        : "All Recipes";
+    document.getElementById("results-count").textContent =
+      `${sorted.length} recipe${sorted.length !== 1 ? "s" : ""}`;
+
+    if (sorted.length === 0) {
+      grid.innerHTML = `<div class="empty-state">
+        <span class="big-emoji">🤔</span>
+        <h3>No matches found</h3>
+        <p>Try a different cuisine or ingredients filter.</p>
+      </div>`;
+      return;
+    }
+
+    grid.innerHTML = sorted.map(recipe => cardHTML(recipe, hasIngFilter)).join("");
+  }
+
+  function cardHTML(recipe, hasFilter) {
+    const matched = matchCount(recipe);
+    const total = recipe.ingredients.length;
+    const pct = Math.round((matched / total) * 100);
+    const isFull = hasFilter && matched === total;
+    const missing = total - matched;
+
+    let badge = "";
+    if (hasFilter && isFull) badge = `<span class="full-match-badge">✓ Have all</span>`;
+    else if (hasFilter && missing > 0) badge = `<span class="missing-badge">+${missing} needed</span>`;
+
+    const matchBarHTML = hasFilter ? `
+      <div class="match-bar-wrap">
+        <div class="match-label">
+          <span>Ingredients you have</span>
+          <span>${matched}/${total}</span>
+        </div>
+        <div class="match-bar-track">
+          <div class="match-bar-fill" style="width:${pct}%"></div>
+        </div>
+      </div>` : "";
+
+    const tags = recipe.tags.slice(0, 3).map(t => `<span class="tag">${t}</span>`).join("");
+
+    return `
+    <div class="recipe-card" onclick="openRecipe(${recipe.id})">
+      ${badge}
+      <span class="card-emoji">${recipe.image}</span>
+      <h3 class="card-title">${recipe.name}</h3>
+      <div class="card-meta">
+        <span class="meta-item">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          ${recipe.time.total} min
+        </span>
+        <span class="meta-item">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+          Serves ${recipe.servings}
+        </span>
+        <span class="meta-item">${recipe.difficulty}</span>
+      </div>
+      <div class="card-tags">${tags}</div>
+      ${matchBarHTML}
+    </div>`;
+  }
+
+  // ── Modal ──
+  const equipmentIcons = {
+    "Stove":"🔥","Oven":"♨️","Pan":"🍳","Large Pot":"🫕","Wok or Large Pan":"🥘",
+    "Blender":"🧃","Toaster":"🍞","Baking Sheet":"▭","Baking Dish":"▭",
+    "Mixing Bowl":"🥣","Mason Jar or Bowl":"🫙","Refrigerator":"🧊",
+    "Colander":"🪣","Fork":"🍴","Knife":"🔪","Cutting Board":"🪵",
+    "Spatula":"🥄","Lid":"🫙","Oven Mitts":"🧤",
+  };
+
+  function openRecipe(id) {
+    const recipe = ALL_RECIPES.find(r => r.id === id);
+    if (!recipe) return;
+
+    document.getElementById("modal-emoji").textContent = recipe.image;
+    document.getElementById("modal-title").textContent = recipe.name;
+
+    document.getElementById("modal-meta").innerHTML = `
+      <div class="modal-meta-item"><span class="modal-meta-value">${recipe.time.prep}m</span><span class="modal-meta-label">Prep</span></div>
+      <div class="modal-meta-item"><span class="modal-meta-value">${recipe.time.cook}m</span><span class="modal-meta-label">Cook</span></div>
+      <div class="modal-meta-item"><span class="modal-meta-value">${recipe.time.total}m</span><span class="modal-meta-label">Total</span></div>
+      <div class="modal-meta-item"><span class="modal-meta-value">${recipe.servings}</span><span class="modal-meta-label">Servings</span></div>
+      <div class="modal-meta-item"><span class="modal-meta-value">${recipe.difficulty}</span><span class="modal-meta-label">Difficulty</span></div>
+    `;
+
+    // Temperature banner
+    const tempSection = document.getElementById("modal-temp-section");
+    if (recipe.temperature) {
+      tempSection.innerHTML = `
+        <div class="temp-banner">
+          <span class="temp-icon">🌡️</span>
+          <span style="color:var(--text-muted);font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:.4px">Oven Temp</span>
+          <div class="temp-values">
+            <div><div class="temp-label">Fahrenheit</div><span class="temp-unit">${recipe.temperature.f}°F</span></div>
+            <div><div class="temp-label">Celsius</div><span class="temp-unit">${recipe.temperature.c}°C</span></div>
+          </div>
+        </div>`;
+      tempSection.style.display = "block";
+    } else {
+      tempSection.innerHTML = "";
+      tempSection.style.display = "none";
+    }
+
+    document.getElementById("modal-equipment").innerHTML =
+      recipe.equipment.map(eq =>
+        `<span class="equipment-chip">${equipmentIcons[eq] || "🔧"} ${eq}</span>`
+      ).join("");
+
+    const hasFilter = selectedIngredients.size > 0;
+    document.getElementById("modal-ingredients").innerHTML =
+      recipe.ingredients.map(ing => {
+        const cls = hasFilter ? (hasIngredient(ing.name) ? "have" : "missing") : "";
+        const amountStr = [ing.amount, ing.unit].filter(Boolean).join(" ");
+        return `<li class="modal-ingredient-item ${cls}">
+          <span class="modal-ing-dot"></span>
+          <span class="modal-ing-name">${ing.name}</span>
+          <span class="modal-ing-amount">${amountStr}</span>
+        </li>`;
+      }).join("");
+
+    document.getElementById("modal-steps").innerHTML =
+      recipe.steps.map((step, i) =>
+        `<li class="step-item">
+          <span class="step-num">${i + 1}</span>
+          <span class="step-text">${step}</span>
+        </li>`
+      ).join("");
+
+    document.getElementById("modal-overlay").classList.add("open");
+    document.body.style.overflow = "hidden";
+  }
+
+  function closeModal() {
+    document.getElementById("modal-overlay").classList.remove("open");
+    document.body.style.overflow = "";
+  }
+
+  function handleOverlayClick(e) {
+    if (e.target === document.getElementById("modal-overlay")) closeModal();
+  }
+
+  document.addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });
+
+  // ── Init ──
+  renderCuisineChips();
+  renderIngredientList();
+  renderRecipes();
+</script>
+</body>
+</html>
