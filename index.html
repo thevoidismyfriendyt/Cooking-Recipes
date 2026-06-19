@@ -853,20 +853,18 @@
 
     // Japanese-specific
     "tofu": "⬜",
-    "miso paste": "🫙",
     "rice cakes": "🍡",
-    "fish cakes": "🐟",
 
-    // Misc
-    "sugar": "🍬",
-    "salt": "🧂",
   };
 
   function getEmoji(name) {
     const n = name.toLowerCase().trim();
     if (INGREDIENT_EMOJIS[n]) return INGREDIENT_EMOJIS[n];
-    for (const key of Object.keys(INGREDIENT_EMOJIS)) {
-      if (n.includes(key) || key.includes(n)) return INGREDIENT_EMOJIS[key];
+    // longest key match first to avoid "egg" matching "eggplant"
+    const keys = Object.keys(INGREDIENT_EMOJIS).sort((a, b) => b.length - a.length);
+    for (const key of keys) {
+      if (n === key) return INGREDIENT_EMOJIS[key];
+      if (n.includes(key) && (n.length === key.length || /\W/.test(n[n.indexOf(key) + key.length] ?? " "))) return INGREDIENT_EMOJIS[key];
     }
     return "🥄";
   }
@@ -968,8 +966,9 @@
 
     list.innerHTML = filtered.map(ing => {
       const selected = selectedIngredients.has(ing);
+      const safe = ing.replace(/"/g, "&quot;");
       return `
-        <div class="ingredient-row ${selected ? "selected" : ""}" onclick="toggleIngredient('${ing}')">
+        <div class="ingredient-row ${selected ? "selected" : ""}" data-ing="${safe}" onclick="toggleIngredient(this.dataset.ing)">
           <span class="ing-emoji">${getEmoji(ing)}</span>
           <span class="ing-name">${ing}</span>
           <span class="ing-check"><span class="ing-check-mark">✓</span></span>
